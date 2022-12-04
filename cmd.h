@@ -8,6 +8,9 @@
 #define CMD_LMS8FE_SET_CONFIG_FULL    0x12
 #define CMD_LMS8FE_GET_CONFIG_FULL    0x13
 #define CMD_LMS8FE_RESET              0x14
+//milans 221128
+#define CMD_LMS8FE_LMS8_ENABLE        0x15
+#define CMD_LMS8FE_SELECT_CHANNEL     0x16
 
 //milans 220419
 //#define CMD_LMS8FE_DIODE            0xf1

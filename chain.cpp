@@ -6,17 +6,19 @@
 #include "cmd.h"
 
 void setChainBit(uint8_t targetByte, uint8_t targetBit, uint8_t value, unsigned char* currentState, unsigned char* tmpState){
-  memcpy(tmpState, currentState, sizeof(currentState[0])*CHAIN_SIZE);
+ //  memcpy(tmpState, currentState, sizeof(currentState[0])*CHAIN_SIZE);
+ //milans 221202
+  memcpy(tmpState, currentState, sizeof(currentState[0])*STATE_SIZE);
   if(value == 0)
     cbi(tmpState[targetByte], targetBit);
   else
     sbi(tmpState[targetByte], targetBit);    
 
-//  shiftData(tmpState, currentState);
-//  setState(tmpState);
+//  shiftData(tmpState);
+//  setupMCU(tmpState[MCU_BYTE]);
+//  memcpy(currentState, tmpState, sizeof(tmpState[0])*CHAIN_SIZE);
 
-  shiftData(tmpState);
-  memcpy(currentState, tmpState, sizeof(tmpState[0])*CHAIN_SIZE);
+//  Function: void setState(unsigned char* state) needs to be invoked for the modified chain data to be active
 }
 
 void resetData(){

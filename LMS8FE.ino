@@ -61,11 +61,8 @@ tLMS_Ctrl_Packet *LMS_Ctrl_Packet_Rx = (tLMS_Ctrl_Packet *)activeBuffer;
 
 uint8_t block, cmd_errors;
 
-
-
 uint16_t maddress = 0x0000;
 uint16_t maddress2 = 0x0001;
-
 
 // B.J.
 uint8_t BuffLMS8FE[64];
@@ -79,7 +76,8 @@ uint16_t faddr = 0x00;
 uint16_t w_nr = 0x00;
 // end B.J.
 
-uint8_t SPI1_transfer_byte(uint8_t cmd) {
+uint8_t SPI1_transfer_byte(uint8_t cmd)
+{
   uint8_t result;
   /*
       while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET); //Wait until the transmit buffer is empty
@@ -98,51 +96,63 @@ uint8_t SPI1_transfer_byte(uint8_t cmd) {
 
 /**  This function checks if all blocks could fit in data field.
   If blocks will not fit, function returns TRUE. */
-unsigned char Check_many_blocks(unsigned char block_size) {
-  if (LMS_Ctrl_Packet_Rx->Header.Data_blocks > (sizeof(LMS_Ctrl_Packet_Tx->Data_field) / block_size)) {
+unsigned char Check_many_blocks(unsigned char block_size)
+{
+  if (LMS_Ctrl_Packet_Rx->Header.Data_blocks > (sizeof(LMS_Ctrl_Packet_Tx->Data_field) / block_size))
+  {
     LMS_Ctrl_Packet_Tx->Header.Status = STATUS_BLOCKS_ERROR_CMD;
     return TRUE;
-  } else
+  }
+  else
     return FALSE;
   return FALSE;
 }
 /************   LMS8001 functions - End   ************/
 
-void cs_setval(int periphID, uint8_t val) {
+void cs_setval(int periphID, uint8_t val)
+{
   uint8_t targetByte;
   uint8_t targetBit;
 
-  switch (periphID) {
-    case PERIPH_SC1905:
-      if (activeChannel == 0) {
-        targetByte = SC1905_1_SSENn_BYTE;
-        targetBit = SC1905_1_SSENn_BIT;
-      } else {
-        targetByte = SC1905_2_SSENn_BYTE;
-        targetBit = SC1905_2_SSENn_BIT;
-      }
-      break;
-    case PERIPH_LMS8001:
-      if (activeChannel == 0) {
-        targetByte = LMS8001_1_SSENn_BYTE;
-        targetBit = LMS8001_1_SSENn_BIT;
-      } else {
-        targetByte = LMS8001_2_SSENn_BYTE;
-        targetBit = LMS8001_2_SSENn_BIT;
-      }
-      break;
-    case PERIPH_ADF4002:
-      targetByte = EXT_PLL_SSENn_BYTE;
-      targetBit = EXT_PLL_SSENn_BIT;
-      break;
-    default:
-      // Implement error handling
-      return;
+  switch (periphID)
+  {
+  case PERIPH_SC1905:
+    if (activeChannel == 0)
+    {
+      targetByte = SC1905_1_SSENn_BYTE;
+      targetBit = SC1905_1_SSENn_BIT;
+    }
+    else
+    {
+      targetByte = SC1905_2_SSENn_BYTE;
+      targetBit = SC1905_2_SSENn_BIT;
+    }
+    break;
+  case PERIPH_LMS8001:
+    if (activeChannel == 0)
+    {
+      targetByte = LMS8001_1_SSENn_BYTE;
+      targetBit = LMS8001_1_SSENn_BIT;
+    }
+    else
+    {
+      targetByte = LMS8001_2_SSENn_BYTE;
+      targetBit = LMS8001_2_SSENn_BIT;
+    }
+    break;
+  case PERIPH_ADF4002:
+    targetByte = EXT_PLL_SSENn_BYTE;
+    targetBit = EXT_PLL_SSENn_BIT;
+    break;
+  default:
+    // Implement error handling
+    return;
   }
   setChainBit(targetByte, targetBit, val, activeState, nextState);
 }
 
-void cs_select(int periphID) {
+void cs_select(int periphID)
+{
   // Here implement the CSEN = 0 for the periphery provided as parameter
   // This is just a temporary solution
   //    asm volatile("nop \n nop \n nop");
@@ -151,7 +161,8 @@ void cs_select(int periphID) {
   cs_setval(periphID, 0);
 }
 
-void cs_deselect(int periphID) {
+void cs_deselect(int periphID)
+{
   // Here implement the CSEN = 1 for the periphery provided as parameter
   // This is just a temporary solution
   //    asm volatile("nop \n nop \n nop");
@@ -174,25 +185,29 @@ void cs_deselect(int periphID) {
   }
 */
 
-int loadenbSC1905pin() {
+int loadenbSC1905pin()
+{
   if (activeChannel == 0)
     return LOADENB_SC1905_1_PIN;
   else
     return LOADENB_SC1905_2_PIN;
 }
 
-void test_irq_handler(uint gpio, uint32_t events) {
+void test_irq_handler(uint gpio, uint32_t events)
+{
   gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, false);
 
-  //spi_write_read_blocking(SPISLAVE, out_buf1, in_buf1, BUFFER_SIZE);
-  //doCommand(in_buf1);
-  // B.J.
+  // B.J. was:
+  // spi_write_read_blocking(SPISLAVE, out_buf1, in_buf1, BUFFER_SIZE);
+  // doCommand(in_buf1);
+  //  B.J.
   MyFunction();
 
   gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, true);
 }
 
-int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv) {
+int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv)
+{
 
   uint8_t lastRSR = 0x00;
 
@@ -209,7 +224,8 @@ int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv) {
 
   lastRSR = in_buf0[3];
 
-  if (!((lastRSR == 0x00) || (lastRSR == SC1905_ACK0) || (lastRSR == SC1905_ACK1))) {
+  if (!((lastRSR == 0x00) || (lastRSR == SC1905_ACK0) || (lastRSR == SC1905_ACK1)))
+  {
     return ERROR_SC1905_RSR;
   }
 
@@ -255,14 +271,16 @@ int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv) {
   out_buf0[2] = 0x28;
 
   bool success = false;
-  while (i < SC1905_RSR_READ_ATTEMPTS) {
+  while (i < SC1905_RSR_READ_ATTEMPTS)
+  {
     cs_select(PERIPH_SC1905);
     spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 4);
     cs_deselect(PERIPH_SC1905);
 
     uint8_t newRSR = in_buf0[3];
 
-    if (((newRSR == SC1905_ACK0) || (newRSR == SC1905_ACK1)) && (newRSR != lastRSR)) {
+    if (((newRSR == SC1905_ACK0) || (newRSR == SC1905_ACK1)) && (newRSR != lastRSR))
+    {
       lastRSR = newRSR;
       success = true;
       break;
@@ -272,7 +290,8 @@ int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv) {
     i++;
   }
 
-  if (!success) {
+  if (!success)
+  {
     return ERROR_SC1905_RSR;
   }
 
@@ -307,14 +326,16 @@ int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv) {
 
   uint8_t read_chk = ~((mrb_rcv[0] + mrb_rcv[1] + mrb_rcv[2] + mrb_rcv[3] + lastRSR) % 256);
 
-  if (chk != read_chk) {
+  if (chk != read_chk)
+  {
     return ERROR_SC1905_CHK;
   }
 
   return COMPLETED;
 }
 
-void sc1905_Reset() {
+void sc1905_Reset()
+{
   //  gpio_put(RESETN_SC1904_PIN, 0);
   //  sleep_ms(100);
   //  gpio_put(RESETN_SC1904_PIN, 1);
@@ -322,10 +343,13 @@ void sc1905_Reset() {
   uint8_t targetByte;
   uint8_t targetBit;
 
-  if (activeChannel == 0) {
+  if (activeChannel == 0)
+  {
     targetByte = SC1905_1_RESETn_BYTE;
     targetBit = SC1905_1_RESETn_BIT;
-  } else {
+  }
+  else
+  {
     targetByte = SC1905_2_RESETn_BYTE;
     targetBit = SC1905_2_RESETn_BIT;
   }
@@ -335,7 +359,8 @@ void sc1905_Reset() {
   setChainBit(targetByte, targetBit, 1, activeState, nextState);
 }
 
-int sc1905_EEPROM_Read(uint8_t *cmd_buf) {
+int sc1905_EEPROM_Read(uint8_t *cmd_buf)
+{
   uint8_t bytesNo = cmd_buf[4];
   clearBuffer(out_buf0);
   out_buf0[0] = 0x03;
@@ -359,10 +384,12 @@ int sc1905_EEPROM_Read(uint8_t *cmd_buf) {
   return COMPLETED;
 }
 
-int sc1905_EEPROM(uint8_t *cmd_buf) {
+int sc1905_EEPROM(uint8_t *cmd_buf)
+{
   uint8_t isRead = cmd_buf[1];
 
-  if (isRead == 1) {
+  if (isRead == 1)
+  {
     // Read
     sc1905_EEPROM_Read(cmd_buf);
     /*
@@ -386,7 +413,9 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
         if (bytesNo == 2)
           cmd_buf[2] = in_buf0[4];
     */
-  } else {
+  }
+  else
+  {
     // Write
     uint8_t tmp_buf[BUFFER_SIZE];
     // Read original values, will be needed for checksum calculation
@@ -396,9 +425,9 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     original_values[0] = tmp_buf[1];
     original_values[1] = tmp_buf[2];
     // Read original checksum, will be needed for checksum calculation
-    tmp_buf[2] = 0xFF;  // Checksum address is 0xFFFF
+    tmp_buf[2] = 0xFF; // Checksum address is 0xFFFF
     tmp_buf[3] = 0xFF;
-    tmp_buf[4] = 1;  // Read single byte
+    tmp_buf[4] = 1; // Read single byte
     sc1905_EEPROM_Read(tmp_buf);
     uint8_t original_checksum = tmp_buf[1];
 
@@ -420,7 +449,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     //    uint8_t statusRegister = in_buf0[4];
 
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x06;  // WREN command to enable write operations to EEPROM
+    out_buf0[0] = 0x06; // WREN command to enable write operations to EEPROM
 
     cs_select(PERIPH_SC1905);
     spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 1);
@@ -428,7 +457,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     sleep_ms(10);
 
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x01;  // Write zero to STATUS register to unlock
+    out_buf0[0] = 0x01; // Write zero to STATUS register to unlock
     out_buf0[1] = 0x00;
 
     cs_select(PERIPH_SC1905);
@@ -440,7 +469,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     //     sleep_ms(1000);
 
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x05;  // Read STATUS register to make sure EEPROM is UNLOCKED
+    out_buf0[0] = 0x05; // Read STATUS register to make sure EEPROM is UNLOCKED
 
     cs_select(PERIPH_SC1905);
     spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 2);
@@ -454,7 +483,8 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     uint8_t bpi01 = statusRegister & 0x0c;
     bool isLocked = (bpi01 != 0);
 
-    if (isLocked) {
+    if (isLocked)
+    {
       cmd_buf[1] = statusRegister;
 
       // milans 220809
@@ -463,7 +493,8 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
       return ERROR_SC1905_EEPROM_LOCKED;
     }
 
-    if (isBusy) {
+    if (isBusy)
+    {
       cmd_buf[1] = statusRegister;
 
       // milans 220809
@@ -474,7 +505,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
 
     // Write
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x06;  // WREN command to enable write operations to EEPROM
+    out_buf0[0] = 0x06; // WREN command to enable write operations to EEPROM
 
     cs_select(PERIPH_SC1905);
     spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 1);
@@ -483,9 +514,9 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
 
     clearBuffer(out_buf0);
     out_buf0[0] = 0x02;
-    out_buf0[1] = cmd_buf[2];  // Address
+    out_buf0[1] = cmd_buf[2]; // Address
     out_buf0[2] = cmd_buf[3];
-    out_buf0[3] = cmd_buf[5];  // Value
+    out_buf0[3] = cmd_buf[5]; // Value
     out_buf0[4] = cmd_buf[6];
 
     uint8_t bytesNo = cmd_buf[4];
@@ -508,7 +539,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
 
     // Write checksum
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x06;  // WREN command to enable write operations to EEPROM
+    out_buf0[0] = 0x06; // WREN command to enable write operations to EEPROM
 
     cs_select(PERIPH_SC1905);
     spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 1);
@@ -517,9 +548,9 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
 
     clearBuffer(out_buf0);
     out_buf0[0] = 0x02;
-    out_buf0[1] = 0xFF;  // Address
+    out_buf0[1] = 0xFF; // Address
     out_buf0[2] = 0xFF;
-    out_buf0[3] = checksum;  // Value
+    out_buf0[3] = checksum; // Value
 
     bytesNo = 1;
 
@@ -533,10 +564,11 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     int i = 0;
 
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x05;  // Read STATUS register to make sure EEPROM is LOCKED
+    out_buf0[0] = 0x05; // Read STATUS register to make sure EEPROM is LOCKED
 
     bool success = false;
-    while (i < SC1905_RSR_READ_ATTEMPTS) {
+    while (i < SC1905_RSR_READ_ATTEMPTS)
+    {
       cs_select(PERIPH_SC1905);
       spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 2);
       cs_deselect(PERIPH_SC1905);
@@ -546,7 +578,8 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
       wip = statusRegister & 0x01;
       isBusy = (wip == 1);
 
-      if (!isBusy) {
+      if (!isBusy)
+      {
         success = true;
         break;
       }
@@ -555,7 +588,8 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
       i++;
     }
 
-    if (!success) {
+    if (!success)
+    {
       cmd_buf[1] = 0x02;
 
       // milans 220809
@@ -565,7 +599,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     }
 
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x06;  // WREN command to enable write operations to EEPROM
+    out_buf0[0] = 0x06; // WREN command to enable write operations to EEPROM
 
     cs_select(PERIPH_SC1905);
     spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, 1);
@@ -573,7 +607,7 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
     sleep_ms(10);
 
     clearBuffer(out_buf0);
-    out_buf0[0] = 0x01;  // Write "0C" to STATUS register to lock
+    out_buf0[0] = 0x01; // Write "0C" to STATUS register to lock
     out_buf0[1] = 0x0C;
 
     cs_select(PERIPH_SC1905);
@@ -606,22 +640,24 @@ int sc1905_EEPROM(uint8_t *cmd_buf) {
   return COMPLETED;
 }
 
-void setState(unsigned char *state) {
+void setState(unsigned char *state)
+{
   shiftData(state);
   setupMCU(state[MCU_BYTE]);
   activeChannel = bitRead(state[MISC_BYTE], MISC_CHANNEL_BIT);
   memcpy(activeState, state, sizeof(state[0]) * STATE_SIZE);
 }
 
-void resetState() {
+void resetState()
+{
   memset(activeState, 0, sizeof(activeState[0]) * STATE_SIZE);
   // activeState[0] = 0xCE;
   activeState[0] = 0xCF;
   activeState[1] = 0x00;
-  activeState[2] = 0x05;  // Bypass AMP1 and AMP2
+  activeState[2] = 0x05; // Bypass AMP1 and AMP2
   activeState[3] = 0x00;
-  activeState[4] = 0xfc;  // Channel 1 Observation Path Attenuation max
-  activeState[5] = 0xff;  // Channel 2 Observation Path Attenuation max
+  activeState[4] = 0xfc; // Channel 1 Observation Path Attenuation max
+  activeState[5] = 0xff; // Channel 2 Observation Path Attenuation max
   activeState[6] = 0x00;
   activeState[7] = 0x00;
 
@@ -634,7 +670,8 @@ void resetState() {
 /*****************************   S E T U P   *****************************/
 /*************************************************************************/
 
-void setup() {
+void setup()
+{
 
   // Initialize serial communication at 9600 bits per second:
   Serial.begin(9600);
@@ -742,22 +779,29 @@ void setup() {
 /******************************   L O O P   ******************************/
 /*************************************************************************/
 
-void loop() {
-  if (Serial.available()) {
+void loop()
+{
+  if (Serial.available())
+  {
 
     Serial.readBytes(activeBuffer, 1);
-    if (activeBuffer[0] == CMD_LMS8FE_HELLO) {
-      while (Serial.read() >= 0) {
-      }  // flush the receive buffer
+    if (activeBuffer[0] == CMD_LMS8FE_HELLO)
+    {
+      while (Serial.read() >= 0)
+      {
+      } // flush the receive buffer
       Serial.write((byte)CMD_LMS8FE_HELLO);
       //      setDiodeState(0);
       delay(100);
-    } else {
+    }
+    else
+    {
       uint8_t *tx_buf;
       unsigned char command;
       command = activeBuffer[0];
 
-      if (command >= LMS8001_CMD_MASK) {
+      if (command >= LMS8001_CMD_MASK)
+      {
         //        periphID = PERIPH_LMS8001_1; // Implement possibility to choose PERIPH_LMS8001_1
         cmd_errors = 0;
         activeBufferSize = BUFFER_SIZE_LMS8001;
@@ -765,7 +809,9 @@ void loop() {
         LMS_Ctrl_Packet_Tx->Header.Command = LMS_Ctrl_Packet_Rx->Header.Command;
         LMS_Ctrl_Packet_Tx->Header.Data_blocks = LMS_Ctrl_Packet_Rx->Header.Data_blocks;
         LMS_Ctrl_Packet_Tx->Header.Status = STATUS_BUSY_CMD;
-      } else {
+      }
+      else
+      {
         activeBufferSize = BUFFER_SIZE;
         tx_buf = activeBuffer;
       }
@@ -781,34 +827,41 @@ void loop() {
   }
 
   // B.J.
-  if (RegLMS8FE[0] == 1) {
+  if (RegLMS8FE[0] == 1)
+  {
 
-    RegLMS8FE[1] = 0x00;  //clear flag
-    if (BuffLMS8FE[0] == CMD_LMS8FE_HELLO) {
-      //BuffLMS8FE[0] = CMD_LMS8FE_HELLO; // not change
+    RegLMS8FE[1] = 0x00; // clear flag
+    if (BuffLMS8FE[0] == CMD_LMS8FE_HELLO)
+    {
+      // BuffLMS8FE[0] = CMD_LMS8FE_HELLO; // not change
       RegLMS8FE[1] = 1; // packet length in bytes = 1
-    } else {
-      //uint8_t *tx_buf;
+    }
+    else
+    {
+      // uint8_t *tx_buf;
       unsigned char command;
       command = BuffLMS8FE[0];
 
-      if (command >= LMS8001_CMD_MASK) {
+      if (command >= LMS8001_CMD_MASK)
+      {
         //        periphID = PERIPH_LMS8001_1; // Implement possibility to choose PERIPH_LMS8001_1
         cmd_errors = 0; // ???
-        //activeBufferSize = BUFFER_SIZE_LMS8001;
-        //tx_buf = BuffLMS8FE;
+        // activeBufferSize = BUFFER_SIZE_LMS8001;
+        // tx_buf = BuffLMS8FE;
         LMS_Ctrl_Packet_Tx->Header.Command = LMS_Ctrl_Packet_Rx->Header.Command;
         LMS_Ctrl_Packet_Tx->Header.Data_blocks = LMS_Ctrl_Packet_Rx->Header.Data_blocks;
         LMS_Ctrl_Packet_Tx->Header.Status = STATUS_BUSY_CMD;
         RegLMS8FE[1] = BUFFER_SIZE_LMS8001; // packet length in bytes = 64
-      } else {
-        //activeBufferSize = BUFFER_SIZE;
-        //tx_buf = BuffLMS8FE;
+      }
+      else
+      {
+        // activeBufferSize = BUFFER_SIZE;
+        // tx_buf = BuffLMS8FE;
         RegLMS8FE[1] = BUFFER_SIZE; // packet length in bytes = 16
       }
       BuffLMS8FE[0] = doCommand(BuffLMS8FE);
     }
-    RegLMS8FE[0] = 0;  // not in progress now
+    RegLMS8FE[0] = 0; // not in progress now
   }
 }
 
@@ -816,452 +869,526 @@ void loop() {
 /************************** D O   C O M M A N D **************************/
 /*************************************************************************/
 
-int doCommand(uint8_t *cmd_buf) {
+int doCommand(uint8_t *cmd_buf)
+{
 
   int result = COMPLETED;
 
-  switch (cmd_buf[0]) {
+  switch (cmd_buf[0])
+  {
 
-    case CMD_LMS8FE_GET_INFO:
-      {
-        clearBuffer(cmd_buf);
-        //        cmd_buf[1] = 0x01; // FW_VER
-        cmd_buf[1] = 0x02;  // FW_VER
-        cmd_buf[2] = 0x01;  // HW_VER
-        cmd_buf[3] = 1;     // Status
-        cmd_buf[4] = 1;     // Status
-        break;
-      }
+  case CMD_LMS8FE_GET_INFO:
+  {
+    clearBuffer(cmd_buf);
+    //        cmd_buf[1] = 0x01; // FW_VER
+    cmd_buf[1] = 0x02; // FW_VER
+    cmd_buf[2] = 0x01; // HW_VER
+    cmd_buf[3] = 1;    // Status
+    cmd_buf[4] = 1;    // Status
+    break;
+  }
 
-      //    case CMD_LMS8FE_DIODE: {
-      //        setDiodeState(cmd_buf[1]);
-      //        break;
-      //      }
+    //    case CMD_LMS8FE_DIODE: {
+    //        setDiodeState(cmd_buf[1]);
+    //        break;
+    //      }
 
-    // milans 220714
-    case CMD_LMS8FE_RESET:
-      {
-        //        setDiodeState(cmd_buf[1]);
-        //        clearBuffer();
-        //        memset(activeState, 0, sizeof(activeState[0])*CHAIN_SIZE);
-        //        shiftData(activeState, activeState);  // Shift Chain Data
-        resetState();
-        break;
-      }
-      /*
-        case CMD_LMS8FE_DIODESPI: {
-            setDiodeState(1);
-            delay(100);
-            setDiodeState(0);
-            delay(100);
-            setDiodeState(1);
-            delay(100);
-            setDiodeState(0);
+  // milans 220714
+  case CMD_LMS8FE_RESET:
+  {
+    //        setDiodeState(cmd_buf[1]);
+    //        clearBuffer();
+    //        memset(activeState, 0, sizeof(activeState[0])*CHAIN_SIZE);
+    //        shiftData(activeState, activeState);  // Shift Chain Data
+    resetState();
+    break;
+  }
+    // milans 221128
+  case CMD_LMS8FE_LMS8_ENABLE:
+  {
+    uint8_t val = cmd_buf[1];
+    //        setChainBit(LMS8001_1_RESETn_BYTE, LMS8001_1_RESETn_BIT, val, activeState, nextState);
+    //        setChainBit(LMS8001_2_RESETn_BYTE, LMS8001_2_RESETn_BIT, val, nextState, nextState);
+    //        setChainBit(LMS8001_1_RESETn_BYTE, LMS8001_1_RESETn_BIT, 0, activeState, nextState);
+    //        setState(nextState);
+    //        setChainBit(LMS8001_2_RESETn_BYTE, LMS8001_2_RESETn_BIT, 1, nextState, nextState);
+    //        setChainBit(LMS8001_2_RESETn_BYTE, LMS8001_2_RESETn_BIT, 1, activeState, nextState);
+    //        setState(nextState);
 
-            out_buf0[0] = CMD_LMS8FE_DIODESPI;
-            out_buf0[1] = cmd_buf[1];
+    setChainBit(LMS8001_1_RESETn_BYTE, LMS8001_1_RESETn_BIT, val, activeState, nextState);
+    setChainBit(LMS8001_2_RESETn_BYTE, LMS8001_2_RESETn_BIT, val, nextState, nextState);
+    setState(nextState);
 
-            // Write the output buffer to MOSI, and at the same time read from MISO.
-            spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, BUFFER_SIZE);
+    break;
+  }
+    // milans 221130
+  case CMD_LMS8FE_SELECT_CHANNEL:
+  {
+    uint8_t val = cmd_buf[1];
+    setChainBit(MISC_BYTE, MISC_CHANNEL_BIT, val, activeState, nextState);
+    setState(nextState);
+    break;
+  }
 
-            break;
-          }
-    */
-    case CMD_LMS8FE_SET_CONFIG_FULL:
-      {
-        //        clearBuffer();
-        //        shiftData(cmd_buf + 1, activeState);  // Shift Chain Data
-        setState(cmd_buf + 1);
-        //        memcpy(activeState, cmd_buf + 1, sizeof(activeState[0])*CHAIN_SIZE);
-        //        activeState[0] = cmd_buf[1];
-
-        //        setupMCU(activeBuffer[CHAIN_SIZE + 1], activeState);  // Setup control signals directly from MCU
-        //        setupMCU(cmd_buf[MCU_BYTE], activeState);  // Setup control signals directly from MCU
-        //        setupMCU(cmd_buf[MCU_BYTE]);  // Setup control signals directly from MCU
-        break;
-      }
-
-    case CMD_LMS8FE_GET_CONFIG_FULL:
-      {
-        clearBuffer(cmd_buf);
-        memcpy(cmd_buf + 1, activeState, sizeof(activeState[0]) * STATE_SIZE);
-        //        cmd_buf[1] = 0x89;
-        break;
-      }
-
-    case CMD_SC1905_SPI_SPECIAL_COMMAND:
-      {
-        //      setDiodeState(1);
-        //      delay(100);
-        //      setDiodeState(0);
-
-        uint8_t mrb[4];
-        uint8_t mrb_rcv[4];
-
-        uint8_t bytesCode = 0x00;
-
-        mrb[0] = cmd_buf[1];
-        mrb[1] = cmd_buf[2];
-        mrb[2] = cmd_buf[3];
-        mrb[3] = cmd_buf[4];
-
-        result = sc1905_message_protocol(mrb, mrb_rcv);
-
-        if (result != COMPLETED)
-          return result;
-
-        cmd_buf[1] = mrb_rcv[0];
-        cmd_buf[2] = mrb_rcv[1];
-        cmd_buf[3] = mrb_rcv[2];
-        cmd_buf[4] = mrb_rcv[3];
-
-        break;
-      }
-
-    case CMD_SC1905_SPI_MESSAGE_MEMORY:
-      {
-        //      setDiodeState(1);
-        //      delay(100);
-        //      setDiodeState(0);
-
-        result = COMPLETED;
-
-        uint8_t isEEPROM = cmd_buf[7];
-
-        if (isEEPROM == 1) {
-          result = sc1905_EEPROM(cmd_buf);
-          if (result != COMPLETED)
-            return result;
-          break;
-        }
-
-        uint8_t mrb[4];
-        uint8_t mrb_rcv[4];
-
-        uint8_t bytesCode = 0x00;
-
-        if (cmd_buf[1] == 1) {  // read
-          bytesCode = 0x04;
-          if (cmd_buf[4] == 2)
-            bytesCode = 0x06;
-        } else {  // write
-          bytesCode = 0x00;
-          if (cmd_buf[4] == 2)
-            bytesCode = 0x02;
-        }
-
-        mrb[0] = (bytesCode << 4) | cmd_buf[2];
-        mrb[1] = cmd_buf[3];
-
-        if (cmd_buf[1] == 1) {  // read
-          mrb[2] = 0x00;
-          mrb[3] = 0x00;
-        } else {  // write
-          mrb[2] = cmd_buf[5];
-          mrb[3] = cmd_buf[6];
-        }
-
-        result = sc1905_message_protocol(mrb, mrb_rcv);
-
-        if (result != COMPLETED)
-          return result;
-
-        cmd_buf[1] = mrb_rcv[2];
-        cmd_buf[2] = mrb_rcv[3];
-
-        break;
-      }
-
-    case CMD_SC1905_RESET:
-      {
-        sc1905_Reset();
-        break;
-      }
     /*
-    //milans 220614
-      case (CMD_LMS_RST | LMS8001_CMD_MASK): {
-        int pause = 100;
-        setDiodeState(1);
-        delay(pause);
-        setDiodeState(0);
-        delay(pause);
-        setDiodeState(1);
-        delay(pause);
-        setDiodeState(0);
-        delay(pause);
-        setDiodeState(1);
-        delay(pause);
-        setDiodeState(0);
+      case CMD_LMS8FE_DIODESPI: {
+          setDiodeState(1);
+          delay(100);
+          setDiodeState(0);
+          delay(100);
+          setDiodeState(1);
+          delay(100);
+          setDiodeState(0);
 
-        break;
-      }
+          out_buf0[0] = CMD_LMS8FE_DIODESPI;
+          out_buf0[1] = cmd_buf[1];
+
+          // Write the output buffer to MOSI, and at the same time read from MISO.
+          spi_write_read_blocking(SPIMASTER, out_buf0, in_buf0, BUFFER_SIZE);
+
+          break;
+        }
   */
-    /************   LMS8001 Commands   ***************/
-    // milans 220615
-    case (CMD_GET_INFO | LMS8001_CMD_MASK):
-      {
+  case CMD_LMS8FE_SET_CONFIG_FULL:
+  {
+    //        clearBuffer();
+    //        shiftData(cmd_buf + 1, activeState);  // Shift Chain Data
+    setState(cmd_buf + 1);
+    //        memcpy(activeState, cmd_buf + 1, sizeof(activeState[0])*CHAIN_SIZE);
+    //        activeState[0] = cmd_buf[1];
 
-        LMS_Ctrl_Packet_Tx->Data_field[0] = FW_VER;
-        LMS_Ctrl_Packet_Tx->Data_field[1] = DEV_TYPE;
-        LMS_Ctrl_Packet_Tx->Data_field[2] = LMS_PROTOCOL_VER;
-        LMS_Ctrl_Packet_Tx->Data_field[3] = HW_VER;
-        LMS_Ctrl_Packet_Tx->Data_field[4] = EXP_BOARD;
+    //        setupMCU(activeBuffer[CHAIN_SIZE + 1], activeState);  // Setup control signals directly from MCU
+    //        setupMCU(cmd_buf[MCU_BYTE], activeState);  // Setup control signals directly from MCU
+    //        setupMCU(cmd_buf[MCU_BYTE]);  // Setup control signals directly from MCU
+    break;
+  }
 
-        LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+  case CMD_LMS8FE_GET_CONFIG_FULL:
+  {
+    clearBuffer(cmd_buf);
+    memcpy(cmd_buf + 1, activeState, sizeof(activeState[0]) * STATE_SIZE);
+    //        cmd_buf[1] = 0x89;
+    break;
+  }
 
-        break;
-      }
+  case CMD_SC1905_SPI_SPECIAL_COMMAND:
+  {
+    //      setDiodeState(1);
+    //      delay(100);
+    //      setDiodeState(0);
 
-    case (CMD_LMS_RST | LMS8001_CMD_MASK):
-      {
-        uint8_t targetByte;
-        uint8_t targetBit;
+    uint8_t mrb[4];
+    uint8_t mrb_rcv[4];
 
-        if (activeChannel == 0) {
-          targetByte = LMS8001_1_RESETn_BYTE;
-          targetBit = LMS8001_1_RESETn_BIT;
-        } else {
-          targetByte = LMS8001_2_RESETn_BYTE;
-          targetBit = LMS8001_2_RESETn_BIT;
-        }
+    uint8_t bytesCode = 0x00;
 
-        switch (LMS_Ctrl_Packet_Rx->Data_field[0]) {
-          case LMS_RST_DEACTIVATE:
-            //          gpio_put(RESETN_LMS8001_PIN, 1);
-            setChainBit(targetByte, targetBit, 1, activeState, nextState);
-            break;
+    mrb[0] = cmd_buf[1];
+    mrb[1] = cmd_buf[2];
+    mrb[2] = cmd_buf[3];
+    mrb[3] = cmd_buf[4];
 
-          case LMS_RST_ACTIVATE:
-            //          gpio_put(RESETN_LMS8001_PIN, 0);
-            setChainBit(targetByte, targetBit, 0, activeState, nextState);
+    result = sc1905_message_protocol(mrb, mrb_rcv);
 
-            break;
+    if (result != COMPLETED)
+      return result;
 
-          case LMS_RST_PULSE:
-            //          gpio_put(RESETN_LMS8001_PIN, 0);
-            //          asm volatile("nop");
-            //          asm volatile("nop");
-            //          asm volatile("nop");
-            //          asm volatile("nop");
-            //          gpio_put(RESETN_LMS8001_PIN, 1);
-            setChainBit(targetByte, targetBit, 0, activeState, nextState);
-            setChainBit(targetByte, targetBit, 1, activeState, nextState);
+    cmd_buf[1] = mrb_rcv[0];
+    cmd_buf[2] = mrb_rcv[1];
+    cmd_buf[3] = mrb_rcv[2];
+    cmd_buf[4] = mrb_rcv[3];
 
-            break;
+    break;
+  }
 
-          default:
-            cmd_errors++;
-            break;
-        }
+  case CMD_SC1905_SPI_MESSAGE_MEMORY:
+  {
+    //      setDiodeState(1);
+    //      delay(100);
+    //      setDiodeState(0);
 
-        LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
-        break;
-      }
+    result = COMPLETED;
 
-    case (CMD_LMS8001_WR | LMS8001_CMD_MASK):
-      {
-        if (Check_many_blocks(4))
-          break;
+    uint8_t isEEPROM = cmd_buf[7];
 
-        //      GPIO_ResetBits(SAEN_PORT, SAEN_PIN); //Enable LMS's SPI
-        //      cs_select(periphID);
-        cs_select(PERIPH_LMS8001);
-        for (block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++) {
-          // write reg addr
-          unsigned char false_write_to_0x0000 = 0;
+    if (isEEPROM == 1)
+    {
+      result = sc1905_EEPROM(cmd_buf);
+      if (result != COMPLETED)
+        return result;
+      break;
+    }
 
-          if ((LMS_Ctrl_Packet_Rx->Header.Data_blocks == 4) && (block != 0) && (LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)] == 0x00) && (LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)] == 0x00))
-            false_write_to_0x0000 = 1;
+    uint8_t mrb[4];
+    uint8_t mrb_rcv[4];
 
-          if (false_write_to_0x0000 == 0)
-            sbi(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)], 7);  // set write bit
+    uint8_t bytesCode = 0x00;
 
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)]);  // reg addr MSB with write bit
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)]);  // reg addr LSB*/
+    if (cmd_buf[1] == 1)
+    { // read
+      bytesCode = 0x04;
+      if (cmd_buf[4] == 2)
+        bytesCode = 0x06;
+    }
+    else
+    { // write
+      bytesCode = 0x00;
+      if (cmd_buf[4] == 2)
+        bytesCode = 0x02;
+    }
 
-          // write reg data
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)]);  // reg data MSB
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)]);  // reg data LSB
-        }
+    mrb[0] = (bytesCode << 4) | cmd_buf[2];
+    mrb[1] = cmd_buf[3];
 
-        //          GPIO_SetBits(SAEN_PORT, SAEN_PIN); //Disable LMS's SPI
-        //      cs_deselect(periphID);
-        cs_deselect(PERIPH_LMS8001);
+    if (cmd_buf[1] == 1)
+    { // read
+      mrb[2] = 0x00;
+      mrb[3] = 0x00;
+    }
+    else
+    { // write
+      mrb[2] = cmd_buf[5];
+      mrb[3] = cmd_buf[6];
+    }
 
-        LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
-        break;
-      }
+    result = sc1905_message_protocol(mrb, mrb_rcv);
 
-    case (CMD_LMS8001_RD | LMS8001_CMD_MASK):
-      {
+    if (result != COMPLETED)
+      return result;
 
-        if (Check_many_blocks(4))
-          break;
-        // Reconfigure_SPI_for_LMS ();
+    cmd_buf[1] = mrb_rcv[2];
+    cmd_buf[2] = mrb_rcv[3];
 
-        //      GPIO_ResetBits(SAEN_PORT, SAEN_PIN); //Enable LMS's SPI
-        //      cs_select(periphID);
-        cs_select(PERIPH_LMS8001);
+    break;
+  }
 
-        for (block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++) {
-          // write reg addr
-          cbi(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 2)], 7);  // clear write bit
+  case CMD_SC1905_RESET:
+  {
+    sc1905_Reset();
+    break;
+  }
+  /*
+  //milans 220614
+    case (CMD_LMS_RST | LMS8001_CMD_MASK): {
+      int pause = 100;
+      setDiodeState(1);
+      delay(pause);
+      setDiodeState(0);
+      delay(pause);
+      setDiodeState(1);
+      delay(pause);
+      setDiodeState(0);
+      delay(pause);
+      setDiodeState(1);
+      delay(pause);
+      setDiodeState(0);
 
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 2)]);  // reg addr MSB
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 2)]);  // reg addr LSB
+      break;
+    }
+*/
+  /************   LMS8001 Commands   ***************/
+  // milans 220615
+  case (CMD_GET_INFO | LMS8001_CMD_MASK):
+  {
 
-          LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 2)];
-          LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 2)];
+    LMS_Ctrl_Packet_Tx->Data_field[0] = FW_VER;
+    LMS_Ctrl_Packet_Tx->Data_field[1] = DEV_TYPE;
+    LMS_Ctrl_Packet_Tx->Data_field[2] = LMS_PROTOCOL_VER;
+    LMS_Ctrl_Packet_Tx->Data_field[3] = HW_VER;
+    LMS_Ctrl_Packet_Tx->Data_field[4] = EXP_BOARD;
 
-          // read reg data
-          LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = SPI1_transfer_byte(0x00);  // reg data MSB
-          LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = SPI1_transfer_byte(0x00);  // reg data LSB
-        }
+    LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
 
-        //      GPIO_SetBits(SAEN_PORT, SAEN_PIN); //Disable LMS's SPI
-        //      cs_deselect(periphID);
-        cs_deselect(PERIPH_LMS8001);
+    break;
+  }
 
-        LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+  case (CMD_LMS_RST | LMS8001_CMD_MASK):
+  {
+    uint8_t targetByte;
+    uint8_t targetBit;
 
-        break;
-      }
-      // milans 220811
-      // ovdi!!!
-    case (CMD_ADF4002_WR | LMS8001_CMD_MASK):
-      {
-        if (Check_many_blocks(3))
-          break;
+    if (activeChannel == 0)
+    {
+      targetByte = LMS8001_1_RESETn_BYTE;
+      targetBit = LMS8001_1_RESETn_BIT;
+    }
+    else
+    {
+      targetByte = LMS8001_2_RESETn_BYTE;
+      targetBit = LMS8001_2_RESETn_BIT;
+    }
 
-        for (block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++) {
-          cs_select(PERIPH_ADF4002);
+    switch (LMS_Ctrl_Packet_Rx->Data_field[0])
+    {
+    case LMS_RST_DEACTIVATE:
+      //          gpio_put(RESETN_LMS8001_PIN, 1);
+      setChainBit(targetByte, targetBit, 1, activeState, nextState);
+      setState(nextState);
+      break;
 
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 3)]);
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 3)]);
-          SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 3)]);
+    case LMS_RST_ACTIVATE:
+      //          gpio_put(RESETN_LMS8001_PIN, 0);
+      setChainBit(targetByte, targetBit, 0, activeState, nextState);
+      setState(nextState);
 
-          cs_deselect(PERIPH_ADF4002);
-        }
+      break;
 
-        LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
-        break;
-        /*
-             case CMD_ADF4002_WR:
-              if(Check_many_blocks (3)) break;
+    case LMS_RST_PULSE:
+      //          gpio_put(RESETN_LMS8001_PIN, 0);
+      //          asm volatile("nop");
+      //          asm volatile("nop");
+      //          asm volatile("nop");
+      //          asm volatile("nop");
+      //          gpio_put(RESETN_LMS8001_PIN, 1);
+      setChainBit(targetByte, targetBit, 0, activeState, nextState);
+      setState(nextState);
+      setChainBit(targetByte, targetBit, 1, activeState, nextState);
+      setState(nextState);
 
-              for(block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++)
-              {
-                GPIO_ResetBits(SBEN_PORT, SBEN_PIN); //Enable ADF's SPI
+      break;
 
-                SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 3)]);
-                SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 3)]);
-                SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 3)]);
-
-                GPIO_SetBits(SBEN_PORT, SBEN_PIN); //Disable ADF's SPI
-              }
-
-              LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
-              break;
-     */
-      }
     default:
-      {
-        clearBuffer(cmd_buf);
-      }
+      cmd_errors++;
+      break;
+    }
+
+    LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+    break;
+  }
+
+  case (CMD_LMS8001_WR | LMS8001_CMD_MASK):
+  {
+    if (Check_many_blocks(4))
+      break;
+
+    //      GPIO_ResetBits(SAEN_PORT, SAEN_PIN); //Enable LMS's SPI
+    //      cs_select(periphID);
+    cs_select(PERIPH_LMS8001);
+    for (block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++)
+    {
+      // write reg addr
+      unsigned char false_write_to_0x0000 = 0;
+
+      if ((LMS_Ctrl_Packet_Rx->Header.Data_blocks == 4) &&
+          (block != 0) &&
+          (LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)] == 0x00) &&
+          (LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)] == 0x00))
+        false_write_to_0x0000 = 1;
+
+      if (false_write_to_0x0000 == 0)
+        sbi(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)], 7); // set write bit
+
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)]); // reg addr MSB with write bit
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)]); // reg addr LSB*/
+
+      // write reg data
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)]); // reg data MSB
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)]); // reg data LSB
+    }
+
+    //          GPIO_SetBits(SAEN_PORT, SAEN_PIN); //Disable LMS's SPI
+    //      cs_deselect(periphID);
+    cs_deselect(PERIPH_LMS8001);
+
+    LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+    break;
+  }
+
+  case (CMD_LMS8001_RD | LMS8001_CMD_MASK):
+  {
+
+    if (Check_many_blocks(4))
+      break;
+    // Reconfigure_SPI_for_LMS ();
+
+    //      GPIO_ResetBits(SAEN_PORT, SAEN_PIN); //Enable LMS's SPI
+    //      cs_select(periphID);
+    cs_select(PERIPH_LMS8001);
+
+    for (block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++)
+    {
+      // write reg addr
+      cbi(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 2)], 7); // clear write bit
+
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 2)]); // reg addr MSB
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 2)]); // reg addr LSB
+
+      LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 2)];
+      LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 2)];
+
+      // read reg data
+      LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = SPI1_transfer_byte(0x00); // reg data MSB
+      LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = SPI1_transfer_byte(0x00); // reg data LSB
+    }
+
+    //      GPIO_SetBits(SAEN_PORT, SAEN_PIN); //Disable LMS's SPI
+    //      cs_deselect(periphID);
+    cs_deselect(PERIPH_LMS8001);
+
+    LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+
+    break;
+  }
+    // milans 220811
+    // ovdi!!!
+  case (CMD_ADF4002_WR | LMS8001_CMD_MASK):
+  {
+    if (Check_many_blocks(3))
+      break;
+
+    for (block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++)
+    {
+      cs_select(PERIPH_ADF4002);
+
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 3)]);
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 3)]);
+      SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 3)]);
+
+      cs_deselect(PERIPH_ADF4002);
+    }
+
+    LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+    break;
+    /*
+         case CMD_ADF4002_WR:
+          if(Check_many_blocks (3)) break;
+
+          for(block = 0; block < LMS_Ctrl_Packet_Rx->Header.Data_blocks; block++)
+          {
+            GPIO_ResetBits(SBEN_PORT, SBEN_PIN); //Enable ADF's SPI
+
+            SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 3)]);
+            SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 3)]);
+            SPI1_transfer_byte(LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 3)]);
+
+            GPIO_SetBits(SBEN_PORT, SBEN_PIN); //Disable ADF's SPI
+          }
+
+          LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+          break;
+ */
+  }
+  default:
+  {
+    clearBuffer(cmd_buf);
+  }
   }
   return COMPLETED;
 }
 
-void clearBuffer() {
-  for (int i = 0; i < BUFFER_SIZE; i++) {
+void clearBuffer()
+{
+  for (int i = 0; i < BUFFER_SIZE; i++)
+  {
     activeBuffer[i] = 0x0;
   }
 }
 
-void clearBuffer(uint8_t *buf) {
-  for (int i = 0; i < BUFFER_SIZE; i++) {
+void clearBuffer(uint8_t *buf)
+{
+  for (int i = 0; i < BUFFER_SIZE; i++)
+  {
     buf[i] = 0x0;
   }
 }
 
-void wait_for_bytes(int num_bytes, unsigned long timeout) {
+void wait_for_bytes(int num_bytes, unsigned long timeout)
+{
   unsigned long startTime = millis();
   // Wait for incoming bytes or exit if timeout
-  while ((Serial.available() < num_bytes) && (millis() - startTime < timeout)) {
+  while ((Serial.available() < num_bytes) && (millis() - startTime < timeout))
+  {
   }
 }
 
-
 // B.J.
-void MyFunction() {
+void MyFunction()
+{
 
   uint8_t zero = 0x00;
   uint8_t ch = 0x00;
   uint16_t temp = 0x00;
 
-  while (spi_is_readable(SPISLAVE)) {
+  while (spi_is_readable(SPISLAVE))
+  {
 
-    switch (spi_state) {
-      case 0:
-        spi_write_read_blocking(SPISLAVE, &zero, RDbyteX, 1);
-        spi_state = 1;
-        break;
+    switch (spi_state)
+    {
+    case 0:
+      spi_write_read_blocking(SPISLAVE, &zero, RDbyteX, 1);
+      spi_state = 1;
+      break;
 
-      case 1:
-        spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 1, 1);
-        temp = (RDbyteX[0] << 8) + RDbyteX[1];
-        maddr = (temp & 0x7FC0) >> 5;
-        faddr = (temp & 0x001F);
-        w_nr = (temp & 0x8000) >> 15;
+    case 1:
+      spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 1, 1);
+      temp = (RDbyteX[0] << 8) + RDbyteX[1];
+      maddr = (temp & 0x7FC0) >> 5;
+      faddr = (temp & 0x001F);
+      w_nr = (temp & 0x8000) >> 15;
 
-        if (maddr == maddress) {
-          if (w_nr == 0) {
-            WRbyteX[2] = BuffLMS8FE[2 * faddr + 1];  // msb part
-            WRbyteX[3] = BuffLMS8FE[2 * faddr];      // lsb part
-          }
-          spi_state = 2;
-          merr = 0;
-        } else if ((maddr == maddress2) && (faddr == 0)) {
-          if (w_nr == 0) {
-            WRbyteX[2] = RegLMS8FE[1];
-            WRbyteX[3] = RegLMS8FE[0];
-          }
-          spi_state = 2;
-          merr = 0; // no error
-        } else if (merr == 0) {
-          spi_state = 0;
-          merr = 1;  // comm. error detection
-        } else {
-          spi_state = 1;
-          merr = 0;
+      if (maddr == maddress)
+      {
+        if (w_nr == 0)
+        {
+          WRbyteX[2] = BuffLMS8FE[2 * faddr + 1]; // msb part
+          WRbyteX[3] = BuffLMS8FE[2 * faddr];     // lsb part
         }
-        break;
-
-      case 2:
-        if (w_nr == 1)
-          spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 2, 1);
-        else
-          spi_write_read_blocking(SPISLAVE, WRbyteX + 2, &ch, 1);
-        spi_state = 3;
-        break;
-
-      case 3:
-        if (w_nr == 1) {
-          spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 3, 1);
-          if (maddr == maddress) {
-            BuffLMS8FE[2 * faddr + 1] = *(RDbyteX + 2);  // msb part
-            BuffLMS8FE[2 * faddr] = *(RDbyteX + 3);      // lsb part
-          } else {
-            RegLMS8FE[1] = *(RDbyteX + 2);  // msb
-            RegLMS8FE[0] = *(RDbyteX + 3);  // lsb
-          }
-        } else {
-          spi_write_read_blocking(SPISLAVE, WRbyteX + 3, &ch, 1);
+        spi_state = 2;
+        merr = 0;
+      }
+      else if ((maddr == maddress2) && (faddr == 0))
+      {
+        if (w_nr == 0)
+        {
+          WRbyteX[2] = RegLMS8FE[1];
+          WRbyteX[3] = RegLMS8FE[0];
         }
+        spi_state = 2;
+        merr = 0; // no error
+      }
+      else if (merr == 0)
+      {
         spi_state = 0;
-        break;
+        merr = 1; // comm. error detection
+      }
+      else
+      {
+        spi_state = 1;
+        merr = 0;
+      }
+      break;
 
-      default: spi_state = 0;
+    case 2:
+      if (w_nr == 1)
+        spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 2, 1);
+      else
+        spi_write_read_blocking(SPISLAVE, WRbyteX + 2, &ch, 1);
+      spi_state = 3;
+      break;
+
+    case 3:
+      if (w_nr == 1)
+      {
+        spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 3, 1);
+        if (maddr == maddress)
+        {
+          BuffLMS8FE[2 * faddr + 1] = *(RDbyteX + 2); // msb part
+          BuffLMS8FE[2 * faddr] = *(RDbyteX + 3);     // lsb part
+        }
+        else
+        {
+          RegLMS8FE[1] = *(RDbyteX + 2); // msb
+          RegLMS8FE[0] = *(RDbyteX + 3); // lsb
+        }
+      }
+      else
+      {
+        spi_write_read_blocking(SPISLAVE, WRbyteX + 3, &ch, 1);
+      }
+      spi_state = 0;
+      break;
+
+    default:
+      spi_state = 0;
     }
   }
 }
