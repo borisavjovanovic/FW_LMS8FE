@@ -67,13 +67,17 @@ uint16_t maddress2 = 0x0001;
 // B.J.
 uint8_t BuffLMS8FE[64];
 uint8_t RegLMS8FE[2];
-uint8_t RDbyteX[4];
-uint8_t WRbyteX[4];
+uint8_t RDbyteX[128]; // for debugging
+int wrPtr = 0;        // for debugging
+int rdPtr = 0;        // for debugging
 uint8_t spi_state = 0;
 uint16_t maddr = 0x00;
-uint16_t merr = 0;
 uint16_t faddr = 0x00;
 uint16_t w_nr = 0x00;
+uint8_t FlagX = 0;
+uint8_t X10, X1 = 0;
+uint16_t src = 0x0000;
+uint16_t dst = 0x0000;
 // end B.J.
 
 uint8_t SPI1_transfer_byte(uint8_t cmd)
@@ -195,15 +199,12 @@ int loadenbSC1905pin()
 
 void test_irq_handler(uint gpio, uint32_t events)
 {
-  gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, false);
+  // gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, false);
 
-  // B.J. was:
-  // spi_write_read_blocking(SPISLAVE, out_buf1, in_buf1, BUFFER_SIZE);
-  // doCommand(in_buf1);
-  //  B.J.
-  MyFunction();
+  // B.J.
+  FlagX = 1;
 
-  gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, true);
+  // gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, true);
 }
 
 int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv)
@@ -764,15 +765,17 @@ void setup()
   //  gpio_set_dir(SPIMASTER_CSN, GPIO_OUT);
   //  gpio_put(SPIMASTER_CSN, 1);
 
-  spi_init(SPISLAVE, 1000 * 1000);
+  // B.J.  SPI slave configuration
+  spi_init(SPISLAVE, 1250 * 1000);
   spi_set_slave(SPISLAVE, true);
+  spi_set_format(SPISLAVE, 16, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
 
   gpio_set_function(SPISLAVE_RX, GPIO_FUNC_SPI);
   gpio_set_function(SPISLAVE_CSN, GPIO_FUNC_SPI);
   gpio_set_function(SPISLAVE_CLK, GPIO_FUNC_SPI);
   gpio_set_function(SPISLAVE_TX, GPIO_FUNC_SPI);
 
-  gpio_set_irq_enabled_with_callback(SPISLAVE_CSN, GPIO_IRQ_EDGE_FALL, true, &test_irq_handler);
+  gpio_set_irq_enabled_with_callback(SPISLAVE_CSN, GPIO_IRQ_EDGE_RISE, true, &test_irq_handler);
 }
 
 /*************************************************************************/
@@ -781,6 +784,7 @@ void setup()
 
 void loop()
 {
+
   if (Serial.available())
   {
 
@@ -826,11 +830,40 @@ void loop()
     }
   }
 
-  // B.J.
-  if (RegLMS8FE[0] == 1)
+   // B.J.
+  if (FlagX == 1)
   {
+    // interrupt on CSN happened, receive the 16-bit data from SPI
+    FlagX = 0;
+    MyFunction();
+  }
 
-    RegLMS8FE[1] = 0x00; // clear flag
+  // B.J.:
+  if (rdPtr != wrPtr)
+  { // for debugging, does not happen in normal operation
+    X10 = 0;
+    X1 = 0;
+    ConvertToAscii(RDbyteX[rdPtr], &X10, &X1);
+    Serial.write(X10);
+    Serial.write(X1);
+    if (rdPtr < 127)
+      rdPtr++;
+    else
+      rdPtr = 0;
+    ConvertToAscii(RDbyteX[rdPtr], &X10, &X1);
+    Serial.write(X10);
+    Serial.write(X1);
+    if (rdPtr < 127)
+      rdPtr++;
+    else
+      rdPtr = 0;
+    Serial.write('\n');
+  }
+
+  if (RegLMS8FE[0] == 1)
+  { // flag set?
+
+    RegLMS8FE[1] = 0x00;
     if (BuffLMS8FE[0] == CMD_LMS8FE_HELLO)
     {
       // BuffLMS8FE[0] = CMD_LMS8FE_HELLO; // not change
@@ -838,13 +871,12 @@ void loop()
     }
     else
     {
-      // uint8_t *tx_buf;
       unsigned char command;
       command = BuffLMS8FE[0];
 
       if (command >= LMS8001_CMD_MASK)
       {
-        //        periphID = PERIPH_LMS8001_1; // Implement possibility to choose PERIPH_LMS8001_1
+        // periphID = PERIPH_LMS8001_1; // Implement possibility to choose PERIPH_LMS8001_1
         cmd_errors = 0; // ???
         // activeBufferSize = BUFFER_SIZE_LMS8001;
         // tx_buf = BuffLMS8FE;
@@ -861,8 +893,30 @@ void loop()
       }
       BuffLMS8FE[0] = doCommand(BuffLMS8FE);
     }
-    RegLMS8FE[0] = 0; // not in progress now
+    RegLMS8FE[0] = 0; // not in progress now, clear flag
   }
+}
+// B.J.: for debugging, not happen in normal operation
+void ConvertToAscii(uint8_t ch, uint8_t *pX10, uint8_t *pX1)
+{
+
+  uint8_t X10, X1 = 0;
+
+  X10 = ((ch & 0xF0) >> 4);
+  X1 = (ch & 0x0F);
+
+  if (X10 > 9)
+    X10 = X10 + 0x37; // A-F
+  else
+    X10 = X10 + 0x30; // 0-9
+
+  if (X1 > 9)
+    X1 = X1 + 0x37;
+  else
+    X1 = X1 + 0x30;
+
+  *pX10 = X10;
+  *pX1 = X1;
 }
 
 /*************************************************************************/
@@ -1301,89 +1355,74 @@ void wait_for_bytes(int num_bytes, unsigned long timeout)
 }
 
 // B.J.
+// for debugging purpose
+void AddRDbyteX(uint16_t dst)
+{
+  RDbyteX[wrPtr] = (uint8_t)((dst & 0xFF00) >> 8);
+  if (wrPtr < 127)
+    wrPtr++;
+  else
+    wrPtr = 0;
+  RDbyteX[wrPtr] = (uint8_t)(dst & 0x00FF);
+  if (wrPtr < 127)
+    wrPtr++;
+  else
+    wrPtr = 0;
+}
+
+// B.J.
 void MyFunction()
 {
 
-  uint8_t zero = 0x00;
-  uint8_t ch = 0x00;
-  uint16_t temp = 0x00;
-
   while (spi_is_readable(SPISLAVE))
   {
-
     switch (spi_state)
     {
     case 0:
-      spi_write_read_blocking(SPISLAVE, &zero, RDbyteX, 1);
-      spi_state = 1;
-      break;
-
-    case 1:
-      spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 1, 1);
-      temp = (RDbyteX[0] << 8) + RDbyteX[1];
-      maddr = (temp & 0x7FC0) >> 5;
-      faddr = (temp & 0x001F);
-      w_nr = (temp & 0x8000) >> 15;
+      spi_write16_read16_blocking(SPISLAVE, &src, &dst, 1);
+      maddr = (dst & 0x7FE0) >> 5;
+      faddr = (dst & 0x001F);
+      w_nr = (dst & 0x8000) >> 15;
 
       if (maddr == maddress)
       {
-        if (w_nr == 0)
-        {
-          WRbyteX[2] = BuffLMS8FE[2 * faddr + 1]; // msb part
-          WRbyteX[3] = BuffLMS8FE[2 * faddr];     // lsb part
-        }
-        spi_state = 2;
-        merr = 0;
+        if (w_nr == 0) // READ
+          src = (BuffLMS8FE[2 * faddr + 1] << 8) + BuffLMS8FE[2 * faddr];
+        else
+          src = 0;
+        spi_state = 1;
       }
       else if ((maddr == maddress2) && (faddr == 0))
       {
-        if (w_nr == 0)
-        {
-          WRbyteX[2] = RegLMS8FE[1];
-          WRbyteX[3] = RegLMS8FE[0];
-        }
-        spi_state = 2;
-        merr = 0; // no error
-      }
-      else if (merr == 0)
-      {
-        spi_state = 0;
-        merr = 1; // comm. error detection
+        if (w_nr == 0) // READ
+          src = (RegLMS8FE[1] << 8) + RegLMS8FE[0];
+        else
+          src = 0;
+        spi_state = 1; // no error
       }
       else
       {
-        spi_state = 1;
-        merr = 0;
+        src = 0;       // error
+        spi_state = 0; // error
       }
       break;
 
-    case 2:
-      if (w_nr == 1)
-        spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 2, 1);
-      else
-        spi_write_read_blocking(SPISLAVE, WRbyteX + 2, &ch, 1);
-      spi_state = 3;
-      break;
-
-    case 3:
+    case 1:
+      spi_write16_read16_blocking(SPISLAVE, &src, &dst, 1);
       if (w_nr == 1)
       {
-        spi_write_read_blocking(SPISLAVE, &zero, RDbyteX + 3, 1);
         if (maddr == maddress)
         {
-          BuffLMS8FE[2 * faddr + 1] = *(RDbyteX + 2); // msb part
-          BuffLMS8FE[2 * faddr] = *(RDbyteX + 3);     // lsb part
+          BuffLMS8FE[2 * faddr + 1] = ((dst & 0xFF00) >> 8); // msb part
+          BuffLMS8FE[2 * faddr] = (dst & 0x00FF);            // lsb part
         }
-        else
+        else if ((maddr == maddress2) && (faddr == 0))
         {
-          RegLMS8FE[1] = *(RDbyteX + 2); // msb
-          RegLMS8FE[0] = *(RDbyteX + 3); // lsb
+          RegLMS8FE[1] = ((dst & 0xFF00) >> 8); // msb part
+          RegLMS8FE[0] = (dst & 0x00FF);        // lsb part
         }
       }
-      else
-      {
-        spi_write_read_blocking(SPISLAVE, WRbyteX + 3, &ch, 1);
-      }
+      src = 0;
       spi_state = 0;
       break;
 
