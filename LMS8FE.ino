@@ -153,6 +153,7 @@ void cs_setval(int periphID, uint8_t val)
     return;
   }
   setChainBit(targetByte, targetBit, val, activeState, nextState);
+  setState(nextState);
 }
 
 void cs_select(int periphID)
@@ -356,8 +357,10 @@ void sc1905_Reset()
   }
 
   setChainBit(targetByte, targetBit, 0, activeState, nextState);
+  setState(nextState);
   sleep_ms(100);
   setChainBit(targetByte, targetBit, 1, activeState, nextState);
+  setState(nextState);
 }
 
 int sc1905_EEPROM_Read(uint8_t *cmd_buf)
@@ -784,7 +787,6 @@ void setup()
 
 void loop()
 {
-
   if (Serial.available())
   {
 
