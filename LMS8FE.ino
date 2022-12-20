@@ -61,8 +61,8 @@ tLMS_Ctrl_Packet *LMS_Ctrl_Packet_Rx = (tLMS_Ctrl_Packet *)activeBuffer;
 
 uint8_t block, cmd_errors;
 
-uint16_t maddress = 0x0000;
-uint16_t maddress2 = 0x0001;
+uint16_t maddress = 0x00AA;
+uint16_t maddress2 = 0x00AB;
 
 // B.J.
 uint8_t BuffLMS8FE[64];
@@ -200,12 +200,12 @@ int loadenbSC1905pin()
 
 void test_irq_handler(uint gpio, uint32_t events)
 {
-  // gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, false);
+  gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, false);
 
   // B.J.
   FlagX = 1;
 
-  // gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, true);
+  gpio_set_irq_enabled(29, GPIO_IRQ_EDGE_FALL, true);
 }
 
 int sc1905_message_protocol(uint8_t *mrb, uint8_t *mrb_rcv)
@@ -778,7 +778,14 @@ void setup()
   gpio_set_function(SPISLAVE_CLK, GPIO_FUNC_SPI);
   gpio_set_function(SPISLAVE_TX, GPIO_FUNC_SPI);
 
-  gpio_set_irq_enabled_with_callback(SPISLAVE_CSN, GPIO_IRQ_EDGE_RISE, true, &test_irq_handler);
+  gpio_set_irq_enabled_with_callback(SPISLAVE_CSN, GPIO_IRQ_EDGE_FALL, true, &test_irq_handler);
+  
+  for (int i=0; i<64; i++) BuffLMS8FE[i] = 0x00;
+  RegLMS8FE[0]=0x00;
+  RegLMS8FE[1]=0x00;
+
+
+
 }
 
 /*************************************************************************/
@@ -870,11 +877,16 @@ void loop()
     {
       // BuffLMS8FE[0] = CMD_LMS8FE_HELLO; // not change
       RegLMS8FE[1] = 1; // packet length in bytes = 1
+      //delay(100);
     }
     else
     {
-      unsigned char command;
+      uint8_t command = 0x00;
+      uint8_t m_bLMS8001 = 0x00;
       command = BuffLMS8FE[0];
+
+      for (int i = 0; i< BUFFER_SIZE_LMS8001; i++)
+           activeBuffer[i] = BuffLMS8FE[i];
 
       if (command >= LMS8001_CMD_MASK)
       {
@@ -882,20 +894,35 @@ void loop()
         cmd_errors = 0; // ???
         // activeBufferSize = BUFFER_SIZE_LMS8001;
         // tx_buf = BuffLMS8FE;
+        m_bLMS8001 = 0x01;      
+        activeBufferSize = BUFFER_SIZE_LMS8001;
+        RegLMS8FE[1] = BUFFER_SIZE_LMS8001; // packet length in bytes = 64
         LMS_Ctrl_Packet_Tx->Header.Command = LMS_Ctrl_Packet_Rx->Header.Command;
         LMS_Ctrl_Packet_Tx->Header.Data_blocks = LMS_Ctrl_Packet_Rx->Header.Data_blocks;
         LMS_Ctrl_Packet_Tx->Header.Status = STATUS_BUSY_CMD;
-        RegLMS8FE[1] = BUFFER_SIZE_LMS8001; // packet length in bytes = 64
       }
       else
       {
         // activeBufferSize = BUFFER_SIZE;
         // tx_buf = BuffLMS8FE;
+        activeBufferSize = BUFFER_SIZE;
         RegLMS8FE[1] = BUFFER_SIZE; // packet length in bytes = 16
       }
-      BuffLMS8FE[0] = doCommand(BuffLMS8FE);
+      activeBuffer[0] = doCommand(activeBuffer);
+
+      // for transmit
+      if (m_bLMS8001 == 0x01) {
+        for (int i = 0; i< BUFFER_SIZE_LMS8001; i++)
+            BuffLMS8FE[i] = activeBufferLMS8001tx[i];
+      }
+      else  {
+        for (int i = 0; i< BUFFER_SIZE_LMS8001; i++)
+            BuffLMS8FE[i] = activeBuffer[i];
+      }
     }
-    RegLMS8FE[0] = 0; // not in progress now, clear flag
+    //RegLMS8FE[0] = 0; // not in progress now, clear flag
+    RegLMS8FE[0] = 0xAA; // not in progress now, clear flag
+    // start of data packet, required for synchronization
   }
 }
 // B.J.: for debugging, not happen in normal operation
@@ -1378,6 +1405,7 @@ void MyFunction()
 
   while (spi_is_readable(SPISLAVE))
   {
+    //sleep_us(8);
     switch (spi_state)
     {
     case 0:
@@ -1385,6 +1413,7 @@ void MyFunction()
       maddr = (dst & 0x7FE0) >> 5;
       faddr = (dst & 0x001F);
       w_nr = (dst & 0x8000) >> 15;
+      src = 0;
 
       if (maddr == maddress)
       {
@@ -1407,6 +1436,7 @@ void MyFunction()
         src = 0;       // error
         spi_state = 0; // error
       }
+      sleep_us(13); // MORA DELAY
       break;
 
     case 1:
@@ -1426,6 +1456,7 @@ void MyFunction()
       }
       src = 0;
       spi_state = 0;
+      sleep_us(13); // MORA DELAY
       break;
 
     default:
